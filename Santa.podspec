@@ -15,7 +15,9 @@ Pod::Spec.new do |s|
 #   * Finally, don't worry about the indent, CocoaPods strips it!
 
   s.description      = <<-DESC
-TODO: Add long description of the pod here.
+  Define your backend resources once and reuse them wherever you like. All the network related code
+  is handled in a single place and can be easily monitored. Benefit from a clear and readable network communication
+  api.
                        DESC
 
   s.homepage         = 'https://github.com/Christian Braun/Santa'

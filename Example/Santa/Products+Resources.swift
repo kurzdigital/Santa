@@ -21,6 +21,6 @@ extension Products {
     }
 
     static var allAsDownload: DownloadResource {
-        return DownloadResource(url: url, method: .get, body: nil, fileName: "Products.txt", uuid: UUID(), authorizationNeeded: false)
+        return DownloadResource(url: url, method: .get, body: nil, fileName: "Products.txt", authorizationNeeded: false)
     }
 }

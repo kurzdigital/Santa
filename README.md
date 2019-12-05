@@ -11,7 +11,7 @@ So this type of request:
 ```Swift
 let request = URLRequest(url: URL(string: "your-url") !)
 URLSession.shared.dataTask(with: request) { data, response, error in
-    let httpResponse = response as!HTTPURLResponse
+    let httpResponse = response as! HTTPURLResponse
     guard httpResponse.statusCode == 200 else {
         fatalError()
     }
@@ -67,6 +67,12 @@ it, simply add the following line to your Podfile:
 ```ruby
 pod 'Santa'
 ```
+
+## TODO
+
+* Write more tests
+* Extend mocked webservice to enable network independent tests (Download tasks, etc.)
+* Add usage description
 
 ## Author
 

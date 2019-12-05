@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "summary": "A resource based network communication lib",
   "description": "Define your backend resources once and reuse them wherever you like. All the network related code\nis handled in a single place and can be easily monitored. Benefit from a clear and readable network communication\napi.",
-  "homepage": "https://github.com/Christian Braun/Santa",
+  "homepage": "https://github.com/kurzdigital/Santa",
   "license": {
     "type": "MIT",
     "file": "LICENSE"
@@ -12,11 +12,14 @@
     "Christian Braun": "christian.braun@kurzdigital.com"
   },
   "source": {
-    "git": "https://github.com/Christian Braun/Santa.git",
+    "git": "https://github.com/kurzdigital/Santa.git",
     "tag": "0.1.0"
   },
+  "swift_versions": "5.0",
   "platforms": {
-    "ios": "8.0"
+    "ios": "9.0"
   },
-  "source_files": "Santa/Classes/**/*"
+  "source_files": "Santa/Classes/**/*",
+  "frameworks": "UIKit",
+  "swift_version": "5.0"
 }

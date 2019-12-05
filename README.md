@@ -9,43 +9,43 @@ It decouples the definition of resources and the required network stack to make 
 
 So this type of request:
 ```Swift
-        let request = URLRequest(url: URL(string: "your-url")!)
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            let httpResponse = response as! HTTPURLResponse
-            guard httpResponse.statusCode == 200 else {
-                fatalError()
-            }
-            let products = try! JSONDecoder().decode(Products.self, from: data!)
-			// Some code to display products on screen
-        }
+let request = URLRequest(url: URL(string: "your-url") !)
+URLSession.shared.dataTask(with: request) { data, response, error in
+    let httpResponse = response as!HTTPURLResponse
+    guard httpResponse.statusCode == 200 else {
+        fatalError()
+    }
+    let products = try !JSONDecoder().decode(Products.self, from: data!)
+    // Some code to display products on screen
+}
 ```
 
 Can be written with Santa this way:
 
 ```Swift
-        let resource = DataResource(url: "your-url", method: .get, body: nil) { data in
-            return try JSONDecoder().decode(Products.self, from: data)
-        }
+let resource = DataResource(url: "your-url", method: .get, body: nil) { data in
+    return try JSONDecoder().decode(Products.self, from: data)
+}
 
-		ImplWebservice().load(resource: resource) { products, error in
-			if let error = error {
-				// do error handling
-			}
+ImplWebservice().load(resource: resource) { products, error in
+    if let error = error {
+        // do error handling
+    }
 
-			// Some code to display products on screen
-        }
+    // Some code to display products on screen
+}
 ```
 
 This way resources can easily be placed right where they belong. As a part of the objects they are ment to fetch.
 
 ```Swift
-		extension Products {
-		    static var all: DataResource<Products> {
-		   		return DataResource(url: url, method: .get, body: nil) { data in
-		            return try JSONDecoder().decode(Products.self, from: data)
-		        }
-			}
-	    }
+extension Products {
+    static var all: DataResource < Products > {
+        return DataResource(url: url, method: .get, body: nil) { data in
+            return try JSONDecoder().decode(Products.self, from: data)
+        }
+    }
+}
 ```
 
 ## Features

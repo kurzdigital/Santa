@@ -93,6 +93,7 @@ final class ImplWebservice: NSObject, Webservice {
         if resource.authorizationNeeded {
             guard let authorization = authorization else {
                 assertionFailure("Authorization must be set if a resource requires authorization")
+                return
             }
             authorization.authorize(request, for: resource) { result in
                 switch result {
@@ -240,6 +241,7 @@ extension ImplWebservice {
         if resource.authorizationNeeded {
             guard let authorization = authorization else {
                 assertionFailure("Authorization must be set if a resource requires authorization")
+                return
             }
             authorization.authorize(request, for: resource) { result in
                 switch result {

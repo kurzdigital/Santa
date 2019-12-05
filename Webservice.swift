@@ -25,7 +25,7 @@ enum NetworkError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .parseUrl:
-            return "A problem with the server adress occured"
+            return "A problem with the server address occured"
         case .parseData:
             return "Can't parse data"
         case .failedAuthorization:

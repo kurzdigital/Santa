@@ -7,9 +7,9 @@
 
 import UIKit
 
-struct ImageCache {
+public struct ImageCache {
     fileprivate var cache = NSCache<NSString, UIImage>()
-    var countLimit: Int {
+    public var countLimit: Int {
         set {
             cache.countLimit = newValue
         }
@@ -18,19 +18,19 @@ struct ImageCache {
         }
     }
 
-    init() {
+    public init() {
         cache.countLimit = 15
     }
 
-    func add(url: String, image: UIImage) {
+    public func add(url: String, image: UIImage) {
         cache.setObject(image, forKey: url as NSString)
     }
 
-    func get(url: String) -> UIImage? {
+    public func get(url: String) -> UIImage? {
         return cache.object(forKey: url as NSString)
     }
 
-    func invalidate() {
+    public func invalidate() {
         cache.removeAllObjects()
     }
 }

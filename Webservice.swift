@@ -7,14 +7,14 @@
 
 import UIKit
 
-protocol Authorization {
+public protocol Authorization {
     func authorize(
         _ request: URLRequest,
         for resource: Resource,
         completion: @escaping (Result<URLRequest, Error>) -> Void)
 }
 
-enum NetworkError: LocalizedError, Equatable {
+public enum NetworkError: LocalizedError, Equatable {
     case parseUrl
     case parseData
     case failedAuthorization
@@ -22,7 +22,7 @@ enum NetworkError: LocalizedError, Equatable {
     case noInternetConnectivity
     case notFound
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .parseUrl:
             return "A problem with the server address occured"
@@ -40,16 +40,16 @@ enum NetworkError: LocalizedError, Equatable {
     }
 }
 
-protocol WebserviceDownloadTaskDelegate: class {
-    func webservice(_ sender: Webservice, didFinishDownload url: String)
-    func webservice(_ sender: Webservice, didErrorDownload url: String, with error: Error)
+public protocol WebserviceDownloadTaskDelegate: class {
+    func webservice(_ sender: Webservice, didFinishDownload url: String, atLocation location: URL, fileName: String)
+    func webservice(_ sender: Webservice, didErrorDownload url: String, with error: Error, forFileName fileName: String?)
 }
 
-protocol WebserviceDelegate: class {
+public protocol WebserviceDelegate: class {
     func webservice(_ sender: Webservice, error: Error, for request: URLRequest, with data: Data?)
 }
 
-protocol Webservice {
+public protocol Webservice {
     var downloadDelegate: WebserviceDownloadTaskDelegate? { get set }
     var delegate: WebserviceDelegate? { get set }
     var authorization: Authorization? { get set }
@@ -62,14 +62,14 @@ protocol Webservice {
     func isTaskActive(for url: URL) -> Bool
 }
 
-final class ImplWebservice: NSObject, Webservice {
-    weak var downloadDelegate: WebserviceDownloadTaskDelegate?
-    weak var delegate: WebserviceDelegate?
-    var authorization: Authorization?
+public final class ImplWebservice: NSObject, Webservice {
+    public weak var downloadDelegate: WebserviceDownloadTaskDelegate?
+    public weak var delegate: WebserviceDelegate?
+    public var authorization: Authorization?
 
+    public var imageCache = ImageCache()
     fileprivate var fileNameForDownloadTasks = [Int: String]()
     fileprivate var activeTasks = [UUID: URLSessionTask]()
-    var imageCache = ImageCache()
     fileprivate lazy var urlSession: URLSession = {
         URLSession(
             configuration: URLSessionConfiguration.default,
@@ -78,7 +78,7 @@ final class ImplWebservice: NSObject, Webservice {
     }()
 
     /// @param completion: Both arguments (data and error) may be nil (for example, when a resource gets deleted)
-    func load<A>(resource: DataResource<A>, completion: @escaping (A?, Error?) -> Void) {
+    public func load<A>(resource: DataResource<A>, completion: @escaping (A?, Error?) -> Void) {
         guard let request = createRequest(fromResource: resource) else {
             completion(nil, NetworkError.parseUrl)
             return
@@ -111,16 +111,16 @@ final class ImplWebservice: NSObject, Webservice {
         }
     }
 
-    func cancelTask(for uuid: UUID) {
+    public func cancelTask(for uuid: UUID) {
         activeTasks[uuid]?.cancel()
         activeTasks.removeValue(forKey: uuid)
     }
 
-    func isTaskActive(for uuid: UUID) -> Bool {
+    public func isTaskActive(for uuid: UUID) -> Bool {
         return activeTasks[uuid] != nil
     }
 
-    func isTaskActive(for url: URL) -> Bool {
+    public func isTaskActive(for url: URL) -> Bool {
         for urlTask in activeTasks.values {
             guard let requestUrl = urlTask.originalRequest?.url else {
                 continue
@@ -134,7 +134,7 @@ final class ImplWebservice: NSObject, Webservice {
         return false
     }
 
-    func reset() {
+    public func reset() {
         resetUrlTasks()
         imageCache.invalidate()
         guard let cookieStorage = urlSession.configuration.httpCookieStorage, let cookies = cookieStorage.cookies else {
@@ -221,7 +221,7 @@ final class ImplWebservice: NSObject, Webservice {
         return nil
     }
 
-    func resetUrlTasks() {
+    public func resetUrlTasks() {
        urlSession.getTasksWithCompletionHandler { dataTasks, uploadTasks, downloadTasks in
             // cancel all tasks
             dataTasks.forEach { $0.cancel() }
@@ -231,7 +231,7 @@ final class ImplWebservice: NSObject, Webservice {
     }
 }
 
-extension ImplWebservice {
+public extension ImplWebservice {
     func load(resource: DownloadResource, onPreparationError: @escaping (Error) -> Void) {
         guard let request = createRequest(fromResource: resource) else {
             onPreparationError(NetworkError.parseUrl)
@@ -271,7 +271,7 @@ extension ImplWebservice {
 extension ImplWebservice: URLSessionDownloadDelegate {
     // MARK: - URLSessionDownloadDelegate
 
-    func urlSession(
+    public func urlSession(
         _ session: URLSession,
         downloadTask: URLSessionDownloadTask,
         didFinishDownloadingTo location: URL) {
@@ -283,17 +283,17 @@ extension ImplWebservice: URLSessionDownloadDelegate {
             preconditionFailure("Download task must contain url")
         }
         do {
-            try DownloadedFilesManager.moveItemToDocuments(
+            let destination = try DownloadedFilesManager.moveItemToDocuments(
                 at: location,
                 fileName: fileName)
-            downloadDelegate?.webservice(self, didFinishDownload: url.absoluteString)
+            downloadDelegate?.webservice(self, didFinishDownload: url.absoluteString, atLocation: destination, fileName: fileName)
         } catch {
             try? DownloadedFilesManager.removeItem(fileName: fileName)
-            downloadDelegate?.webservice(self, didErrorDownload: url.absoluteString, with: error)
+            downloadDelegate?.webservice(self, didErrorDownload: url.absoluteString, with: error, forFileName: fileName)
         }
     }
 
-    func urlSession(
+    public func urlSession(
         _ session: URLSession,
         task: URLSessionTask,
         didCompleteWithError error: Error?) {
@@ -311,22 +311,22 @@ extension ImplWebservice: URLSessionDownloadDelegate {
             if let fileName = fileName {
                 try? DownloadedFilesManager.removeItem(fileName: fileName)
             }
-            downloadDelegate?.webservice(self, didErrorDownload: url.absoluteString, with: error)
+            downloadDelegate?.webservice(self, didErrorDownload: url.absoluteString, with: error, forFileName: fileName)
         }
     }
 }
 
-final class MockWebservice: Webservice {
-    weak var downloadDelegate: WebserviceDownloadTaskDelegate?
-    weak var delegate: WebserviceDelegate?
+public final class MockWebservice: Webservice {
+    public weak var downloadDelegate: WebserviceDownloadTaskDelegate?
+    public weak var delegate: WebserviceDelegate?
     /// Will not be used with the mocked webservice
-    var authorization: Authorization?
-    var mocksForUrl = [String: (data: Data?, error: Error?)]()
+    public var authorization: Authorization?
+    public var mocksForUrl = [String: (data: Data?, error: Error?)]()
 
-    func load(resource: DownloadResource, onPreparationError: @escaping (Error) -> Void) {
+    public func load(resource: DownloadResource, onPreparationError: @escaping (Error) -> Void) {
     }
 
-    func load<A>(resource: DataResource<A>, completion: @escaping (A?, Error?) -> Void) {
+    public func load<A>(resource: DataResource<A>, completion: @escaping (A?, Error?) -> Void) {
         if let currentMock = mocksForUrl[resource.url] {
             if let data = currentMock.data {
                 try? completion(resource.parseData(data), currentMock.error)
@@ -338,17 +338,17 @@ final class MockWebservice: Webservice {
         }
     }
 
-    func reset() {
+    public func reset() {
     }
 
-    func cancelTask(for uuid: UUID) {
+    public func cancelTask(for uuid: UUID) {
     }
 
-    func isTaskActive(for uuid: UUID) -> Bool {
+    public func isTaskActive(for uuid: UUID) -> Bool {
         return true
     }
 
-    func isTaskActive(for url: URL) -> Bool {
+    public func isTaskActive(for url: URL) -> Bool {
         return true
     }
 }

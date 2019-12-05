@@ -8,28 +8,20 @@
 import Foundation
 
 struct DownloadedFilesManager {
-    static func moveItemToDocuments(at location: URL, fileName: String) throws {
+    static func moveItemToDocuments(at location: URL, fileName: String) throws -> URL {
         let destinationUrl = try fileUrl(for: fileName)
         // Always override existing files
         if FileManager.default.fileExists(atPath: destinationUrl.path) {
             try FileManager.default.removeItem(at: destinationUrl)
         }
         try FileManager.default.moveItem(at: location, to: destinationUrl)
+        return destinationUrl
     }
 
     static func removeItem(fileName: String) throws {
         let destinationUrl = try fileUrl(for: fileName)
         if FileManager.default.fileExists(atPath: destinationUrl.path) {
             try FileManager.default.removeItem(at: destinationUrl)
-        }
-    }
-
-    static func exists(_ attachment: Attachment) -> Bool {
-        do {
-            let destinationUrl = try fileUrl(for: attachment.fileNameForSaving)
-            return FileManager.default.fileExists(atPath: destinationUrl.path)
-        } catch {
-            return false
         }
     }
 

@@ -6,39 +6,39 @@
 //
 import Foundation
 
-typealias Boundary = String
+public typealias Boundary = String
 
-enum HTTPMethod: String {
+public enum HTTPMethod: String {
     case get = "GET"
     case put = "PUT"
     case post = "POST"
     case delete = "DELETE"
 }
 
-struct HTTPHeader {
-    static let contentTypeNone = ""
-    static let contentTypeTextPlain = "text/plain"
-    static let contentTypeJson = "application/json"
-    static let contentTypeUrlEncoded = "application/x-www-form-urlencoded"
-    static let contentTypeImageJpeg = "image/jpeg"
-    static let contentTypeImagePng = "image/png"
-    static let acceptNone = ""
-    static let acceptTextPlain = "text/plain"
-    static let acceptJson = "application/json"
-    static let acceptPdf = "application/pdf"
+public struct HTTPHeader {
+    public static let contentTypeNone = ""
+    public static let contentTypeTextPlain = "text/plain"
+    public static let contentTypeJson = "application/json"
+    public static let contentTypeUrlEncoded = "application/x-www-form-urlencoded"
+    public static let contentTypeImageJpeg = "image/jpeg"
+    public static let contentTypeImagePng = "image/png"
+    public static let acceptNone = ""
+    public static let acceptTextPlain = "text/plain"
+    public static let acceptJson = "application/json"
+    public static let acceptPdf = "application/pdf"
 
-    static func contentTypeMultipart(boundary: String) -> String {
+    public static func contentTypeMultipart(boundary: String) -> String {
         return "multipart/form-data; boundary=\(boundary)"
     }
 }
 
-struct Headers {
-    var contentType = HTTPHeader.contentTypeNone
-    var accept = HTTPHeader.acceptNone
-    var other = [String: String]()
+public struct Headers {
+    public var contentType = HTTPHeader.contentTypeNone
+    public var accept = HTTPHeader.acceptNone
+    public var other = [String: String]()
 }
 
-protocol Resource {
+public protocol Resource {
     var url: String { get }
     var method: HTTPMethod { get }
     var body: Data? { get }
@@ -54,16 +54,16 @@ protocol Resource {
     func update(uuid: UUID) -> Self
 }
 
-final class DataResource<A>: Resource {
-    let url: String
-    let method: HTTPMethod
-    let body: Data?
-    let parseData: (Data) throws -> A?
-    var authorizationNeeded = true
-    var headers = Headers()
-    let uuid: UUID
+public final class DataResource<A>: Resource {
+    public let url: String
+    public let method: HTTPMethod
+    public let body: Data?
+    public let parseData: (Data) throws -> A?
+    public var authorizationNeeded = true
+    public var headers = Headers()
+    public let uuid: UUID
 
-    init(
+    public init(
         url: String,
         method: HTTPMethod,
         body: Data?,
@@ -78,7 +78,7 @@ final class DataResource<A>: Resource {
         self.authorizationNeeded = authorizationNeeded
     }
 
-    func update(uuid: UUID) -> DataResource {
+    public func update(uuid: UUID) -> DataResource {
         return DataResource(
             url: url,
             method: method,
@@ -88,12 +88,12 @@ final class DataResource<A>: Resource {
             parseData: parseData)
     }
 
-    static func randomBoundary() -> String {
+    public static func randomBoundary() -> String {
         let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         return "XXX\(String(alphabet.shuffled()).dropFirst(alphabet.count - 10))XXX"
     }
 
-    static func multipartFormData(with data: Data, boundary: Boundary, mimeType: String) -> Data {
+    public static func multipartFormData(with data: Data, boundary: Boundary, mimeType: String) -> Data {
         var returnData = Data()
 
         guard let boundaryData = "--\(boundary)\r\n".data(using: .utf8),
@@ -115,16 +115,16 @@ final class DataResource<A>: Resource {
     }
 }
 
-final class DownloadResource: Resource {
-    let url: String
-    let method: HTTPMethod
-    let body: Data?
-    let fileName: String
-    var authorizationNeeded = true
-    var headers = Headers()
-    let uuid: UUID
+public final class DownloadResource: Resource {
+    public let url: String
+    public let method: HTTPMethod
+    public let body: Data?
+    public let fileName: String
+    public var authorizationNeeded = true
+    public var headers = Headers()
+    public let uuid: UUID
 
-    init(
+    public init(
         url: String,
         method: HTTPMethod,
         body: Data?,
@@ -139,7 +139,7 @@ final class DownloadResource: Resource {
         self.authorizationNeeded = authorizationNeeded
     }
 
-    func update(uuid: UUID) -> DownloadResource {
+    public func update(uuid: UUID) -> DownloadResource {
         return DownloadResource(
             url: url,
             method: method,

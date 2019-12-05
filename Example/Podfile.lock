@@ -1,0 +1,16 @@
+PODS:
+  - Santa (0.1.0)
+
+DEPENDENCIES:
+  - Santa (from `../`)
+
+EXTERNAL SOURCES:
+  Santa:
+    :path: "../"
+
+SPEC CHECKSUMS:
+  Santa: 17b73737e196f69e6e6bb5bc595e107c1fc73ad2
+
+PODFILE CHECKSUM: 230c51012dd7b57e481e6ba10ff9e003475dc10e
+
+COCOAPODS: 1.8.3

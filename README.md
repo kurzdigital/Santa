@@ -1,15 +1,63 @@
 # Santa
 
-[![CI Status](https://img.shields.io/travis/Christian Braun/Santa.svg?style=flat)](https://travis-ci.org/Christian Braun/Santa)
 [![Version](https://img.shields.io/cocoapods/v/Santa.svg?style=flat)](https://cocoapods.org/pods/Santa)
 [![License](https://img.shields.io/cocoapods/l/Santa.svg?style=flat)](https://cocoapods.org/pods/Santa)
 [![Platform](https://img.shields.io/cocoapods/p/Santa.svg?style=flat)](https://cocoapods.org/pods/Santa)
 
-## Example
+A resource based network communication lib inspired by the first episode of the [Swift Talk](https://talk.objc.io/episodes/S01E1-tiny-networking-library) webshow.
+It decouples the definition of resources and the required network stack to make the actual network call.
 
-To run the example project, clone the repo, and run `pod install` from the Example directory first.
+So this type of request:
+```Swift
+        let request = URLRequest(url: URL(string: "your-url")!)
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            let httpResponse = response as! HTTPURLResponse
+            guard httpResponse.statusCode == 200 else {
+                fatalError()
+            }
+            let products = try! JSONDecoder().decode(Products.self, from: data!)
+			// Some code to display products on screen
+        }
+```
+
+Can be written with Santa this way:
+
+```Swift
+        let resource = DataResource(url: "your-url", method: .get, body: nil) { data in
+            return try JSONDecoder().decode(Products.self, from: data)
+        }
+
+		ImplWebservice().load(resource: resource) { products, error in
+			if let error = error {
+				// do error handling
+			}
+
+			// Some code to display products on screen
+        }
+```
+
+This way resources can easily be placed right where they belong. As a part of the objects they are ment to fetch.
+
+```Swift
+		extension Products {
+		    static var all: DataResource<Products> {
+		   		return DataResource(url: url, method: .get, body: nil) { data in
+		            return try JSONDecoder().decode(Products.self, from: data)
+		        }
+			}
+	    }
+```
+
+## Features
+* Support for custom athorization
+* Background download tasks
+* Cancelation of running URLSessionTasks
+* ImageCache based on the url
+* Error handling for error status codes and network problems
 
 ## Requirements
+* Swift 5
+* iOS 9.0 or newer
 
 ## Installation
 
@@ -22,7 +70,7 @@ pod 'Santa'
 
 ## Author
 
-Christian Braun, braun.christian.bamberg@gmail.com
+Christian Braun
 
 ## License
 

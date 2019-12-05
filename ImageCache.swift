@@ -9,6 +9,14 @@ import UIKit
 
 struct ImageCache {
     fileprivate var cache = NSCache<NSString, UIImage>()
+    var countLimit: Int {
+        set {
+            cache.countLimit = newValue
+        }
+        get {
+            cache.countLimit
+        }
+    }
 
     init() {
         cache.countLimit = 15

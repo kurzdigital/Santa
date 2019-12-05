@@ -69,7 +69,7 @@ final class ImplWebservice: NSObject, Webservice {
 
     fileprivate var fileNameForDownloadTasks = [Int: String]()
     fileprivate var activeTasks = [UUID: URLSessionTask]()
-    fileprivate let imageCache = ImageCache()
+    var imageCache = ImageCache()
     fileprivate lazy var urlSession: URLSession = {
         URLSession(
             configuration: URLSessionConfiguration.default,

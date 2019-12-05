@@ -286,12 +286,12 @@ extension ImplWebservice: URLSessionDownloadDelegate {
             preconditionFailure("Download task must contain url")
         }
         do {
-            try Dependencies.shared.downloadedFilesManager.moveItemToDocuments(
+            try DownloadedFilesManager.moveItemToDocuments(
                 at: location,
                 fileName: fileName)
             downloadDelegate?.webservice(self, didFinishDownload: url.absoluteString)
         } catch {
-            try? Dependencies.shared.downloadedFilesManager.removeItem(fileName: fileName)
+            try? DownloadedFilesManager.removeItem(fileName: fileName)
             downloadDelegate?.webservice(self, didErrorDownload: url.absoluteString, with: error)
         }
     }
@@ -312,7 +312,7 @@ extension ImplWebservice: URLSessionDownloadDelegate {
 
         if let error = errorForResponseAndError(task.response, error) {
             if let fileName = fileName {
-                try? Dependencies.shared.downloadedFilesManager.removeItem(fileName: fileName)
+                try? DownloadedFilesManager.removeItem(fileName: fileName)
             }
             downloadDelegate?.webservice(self, didErrorDownload: url.absoluteString, with: error)
         }

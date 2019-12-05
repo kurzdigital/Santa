@@ -28,9 +28,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		063500D868A29B0DF75FE67E /* LICENSE */ = {isa = PBXFileReference; includeInIndex = 1; name = LICENSE; path = ../LICENSE; sourceTree = "<group>"; };
+		063500D868A29B0DF75FE67E /* LICENSE */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = LICENSE; path = ../LICENSE; sourceTree = "<group>"; };
 		18D6F1B40F340FDDFE846AA4 /* Pods-Santa_Tests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Santa_Tests.debug.xcconfig"; path = "Target Support Files/Pods-Santa_Tests/Pods-Santa_Tests.debug.xcconfig"; sourceTree = "<group>"; };
-		54B8918E7693014C035A6945 /* Santa.podspec */ = {isa = PBXFileReference; includeInIndex = 1; name = Santa.podspec; path = ../Santa.podspec; sourceTree = "<group>"; };
+		54B8918E7693014C035A6945 /* Santa.podspec */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = Santa.podspec; path = ../Santa.podspec; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
 		5F8A4EBD5A31CF66EED714F6 /* Pods_Santa_Example.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Santa_Example.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		607FACD01AFB9204008FA782 /* Santa_Example.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Santa_Example.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		607FACD41AFB9204008FA782 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -45,7 +45,7 @@
 		8225B44BA0A3B6EE22061C21 /* Pods-Santa_Example.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Santa_Example.release.xcconfig"; path = "Target Support Files/Pods-Santa_Example/Pods-Santa_Example.release.xcconfig"; sourceTree = "<group>"; };
 		959E90601B90E7FDCEF2CC97 /* Pods-Santa_Example.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Santa_Example.debug.xcconfig"; path = "Target Support Files/Pods-Santa_Example/Pods-Santa_Example.debug.xcconfig"; sourceTree = "<group>"; };
 		9E3B343AF4B0C6CA828128F6 /* Pods_Santa_Tests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Santa_Tests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		C8812AF43F3D8B628896D280 /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; name = README.md; path = ../README.md; sourceTree = "<group>"; };
+		C8812AF43F3D8B628896D280 /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = "<group>"; };
 		EC1E7AC6B051F81E9848BBE8 /* Pods-Santa_Tests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Santa_Tests.release.xcconfig"; path = "Target Support Files/Pods-Santa_Tests/Pods-Santa_Tests.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -77,7 +77,6 @@
 				18D6F1B40F340FDDFE846AA4 /* Pods-Santa_Tests.debug.xcconfig */,
 				EC1E7AC6B051F81E9848BBE8 /* Pods-Santa_Tests.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -227,6 +226,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 				Base,
 			);

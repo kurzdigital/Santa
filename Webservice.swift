@@ -7,6 +7,13 @@
 
 import UIKit
 
+protocol Authorization {
+    func authorize(
+        _ request: URLRequest,
+        for resource: Resource,
+        completion: @escaping (Result<URLRequest, Error>) -> Void)
+}
+
 enum NetworkError: LocalizedError, Equatable {
     case parseUrl
     case parseData
@@ -38,8 +45,14 @@ protocol WebserviceDownloadTaskDelegate: class {
     func webservice(_ sender: Webservice, didErrorDownload url: String, with error: Error)
 }
 
+protocol WebserviceDelegate: class {
+    func webservice(_ sender: Webservice, error: Error, for request: URLRequest, with data: Data?)
+}
+
 protocol Webservice {
-    var downloadDelegate: WebserviceDownloadTaskDelegate? { get }
+    var downloadDelegate: WebserviceDownloadTaskDelegate? { get set }
+    var delegate: WebserviceDelegate? { get set }
+    var authorization: Authorization? { get set }
 
     func load<A>(resource: DataResource<A>, completion: @escaping (A?, Error?) -> Void)
     func load(resource: DownloadResource, onPreparationError: @escaping (Error) -> Void)
@@ -47,11 +60,12 @@ protocol Webservice {
     func cancelTask(for uuid: UUID)
     func isTaskActive(for uuid: UUID) -> Bool
     func isTaskActive(for url: URL) -> Bool
-    func setDownloadDelegate(_ delegate: WebserviceDownloadTaskDelegate?)
 }
 
 final class ImplWebservice: NSObject, Webservice {
     weak var downloadDelegate: WebserviceDownloadTaskDelegate?
+    weak var delegate: WebserviceDelegate?
+    var authorization: Authorization?
 
     fileprivate var fileNameForDownloadTasks = [Int: String]()
     fileprivate var activeTasks = [UUID: URLSessionTask]()
@@ -62,10 +76,6 @@ final class ImplWebservice: NSObject, Webservice {
             delegate: self,
             delegateQueue: nil)
     }()
-
-    func setDownloadDelegate(_ delegate: WebserviceDownloadTaskDelegate?) {
-        self.downloadDelegate = delegate
-    }
 
     /// @param completion: Both arguments (data and error) may be nil (for example, when a resource gets deleted)
     func load<A>(resource: DataResource<A>, completion: @escaping (A?, Error?) -> Void) {
@@ -81,7 +91,10 @@ final class ImplWebservice: NSObject, Webservice {
         }
 
         if resource.authorizationNeeded {
-            authorizeRequest(resource: resource, request) { result in
+            guard let authorization = authorization else {
+                assertionFailure("Authorization must be set if a resource requires authorization")
+            }
+            authorization.authorize(request, for: resource) { result in
                 switch result {
                 case .success(let authedRequest):
                     self.doRequest(
@@ -149,31 +162,12 @@ final class ImplWebservice: NSObject, Webservice {
         return request
     }
 
-    fileprivate func authorizeRequest(resource: Resource, _ request: URLRequest, completion: @escaping (Result<URLRequest, Error>) -> Void) {
-        Dependencies.shared.authTokenHandler.requestToken(uuid: resource.uuid) { either in
-            switch either {
-            case .success(let tokenType):
-                var mutableRequest = request
-                switch tokenType {
-                case .clientToken(let clientToken):
-                    mutableRequest.addValue(clientToken.token, forHTTPHeaderField: "Client-Auth-Token")
-                    completion(.success(mutableRequest))
-                case .keycloakToken(let keycloakCredentials):
-                    mutableRequest.addValue("Bearer \(keycloakCredentials.accessToken)", forHTTPHeaderField: "Authorization")
-                    completion(.success(mutableRequest))
-                }
-            case .error(let error):
-                completion(.error(error))
-            }
-        }
-    }
-
     fileprivate func doRequest<A>(resource: DataResource<A>, _ request: URLRequest, completion: @escaping (A?, Error?) -> Void) {
         let dataTask = urlSession.dataTask(with: request) { data, response, error in
             self.activeTasks.removeValue(forKey: resource.uuid)
             if let error = self.errorForResponseAndError(response, error) {
                 completion(nil, error)
-                self.sendSentryMessage(for: error, request: request, with: data)
+                self.delegate?.webservice(self, error: error, for: request, with: data)
                 return
             }
             guard let data = data else {
@@ -244,20 +238,21 @@ extension ImplWebservice {
         }
 
         if resource.authorizationNeeded {
-            if resource.authorizationNeeded {
-                authorizeRequest(resource: resource, request) { result in
-                    switch result {
-                    case .success(let authedRequest):
-                        self.doRequest(
-                            resource: resource,
-                            authedRequest)
-                    case .failure(let error):
-                        onPreparationError(error)
-                    }
-                }
-            } else {
-                doRequest(resource: resource, request)
+            guard let authorization = authorization else {
+                assertionFailure("Authorization must be set if a resource requires authorization")
             }
+            authorization.authorize(request, for: resource) { result in
+                switch result {
+                case .success(let authedRequest):
+                    self.doRequest(
+                        resource: resource,
+                        authedRequest)
+                case .failure(let error):
+                    onPreparationError(error)
+                }
+            }
+        } else {
+            doRequest(resource: resource, request)
         }
     }
 
@@ -321,11 +316,10 @@ extension ImplWebservice: URLSessionDownloadDelegate {
 
 final class MockWebservice: Webservice {
     weak var downloadDelegate: WebserviceDownloadTaskDelegate?
+    weak var delegate: WebserviceDelegate?
+    /// Will not be used with the mocked webservice
+    var authorization: Authorization?
     var mocksForUrl = [String: (data: Data?, error: Error?)]()
-
-    func setDownloadDelegate(_ delegate: WebserviceDownloadTaskDelegate?) {
-        self.downloadDelegate = delegate
-    }
 
     func load(resource: DownloadResource, onPreparationError: @escaping (Error) -> Void) {
     }

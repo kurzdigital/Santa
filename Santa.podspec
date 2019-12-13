@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'Santa'
-  s.version          = '0.1.0'
+  s.version          = '0.2.0'
   s.summary          = 'A resource based network communication lib'
 
   s.description      = <<-DESC

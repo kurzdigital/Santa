@@ -323,6 +323,9 @@ public final class MockWebservice: Webservice {
     public var authorization: RequestAuthorization?
     public var mocksForUrl = [String: (data: Data?, error: Error?)]()
 
+    public init() {
+    }
+
     public func load(resource: DownloadResource, onPreparationError: @escaping (Error) -> Void) {
     }
 

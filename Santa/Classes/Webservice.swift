@@ -7,7 +7,7 @@
 
 import UIKit
 
-public protocol Authorization {
+public protocol RequestAuthorization {
     func authorize(
         _ request: URLRequest,
         for resource: Resource,
@@ -52,7 +52,7 @@ public protocol WebserviceDelegate: class {
 public protocol Webservice {
     var downloadDelegate: WebserviceDownloadTaskDelegate? { get set }
     var delegate: WebserviceDelegate? { get set }
-    var authorization: Authorization? { get set }
+    var authorization: RequestAuthorization? { get set }
 
     func load<A>(resource: DataResource<A>, completion: @escaping (A?, Error?) -> Void)
     func load(resource: DownloadResource, onPreparationError: @escaping (Error) -> Void)
@@ -65,7 +65,7 @@ public protocol Webservice {
 public final class ImplWebservice: NSObject, Webservice {
     public weak var downloadDelegate: WebserviceDownloadTaskDelegate?
     public weak var delegate: WebserviceDelegate?
-    public var authorization: Authorization?
+    public var authorization: RequestAuthorization?
 
     public var imageCache = ImageCache()
     fileprivate var fileNameForDownloadTasks = [Int: String]()
@@ -320,7 +320,7 @@ public final class MockWebservice: Webservice {
     public weak var downloadDelegate: WebserviceDownloadTaskDelegate?
     public weak var delegate: WebserviceDelegate?
     /// Will not be used with the mocked webservice
-    public var authorization: Authorization?
+    public var authorization: RequestAuthorization?
     public var mocksForUrl = [String: (data: Data?, error: Error?)]()
 
     public func load(resource: DownloadResource, onPreparationError: @escaping (Error) -> Void) {

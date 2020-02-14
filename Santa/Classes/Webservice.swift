@@ -51,7 +51,7 @@ public protocol WebserviceDelegate: class {
 
 public protocol Webservice {
     var downloadDelegate: WebserviceDownloadTaskDelegate? { get set }
-    var delegate: WebserviceDelegate? { get }
+    var delegate: WebserviceDelegate? { get set }
     var authorization: RequestAuthorization? { get set }
 
     func load<A>(resource: DataResource<A>, completion: @escaping (A?, Error?) -> Void)
@@ -80,6 +80,10 @@ public final class ImplWebservice: NSObject, Webservice {
 
     public func setDownloadDelegate(_ delegate: WebserviceDownloadTaskDelegate?) {
         self.downloadDelegate = delegate
+    }
+
+    public func setDelegate(_ delegate: WebserviceDelegate?) {
+        self.delegate = delegate
     }
 
     /// @param completion: Both arguments (data and error) may be nil (for example, when a resource gets deleted)

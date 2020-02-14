@@ -51,7 +51,7 @@ public protocol WebserviceDelegate: class {
 
 public protocol Webservice {
     var downloadDelegate: WebserviceDownloadTaskDelegate? { get set }
-    var delegate: WebserviceDelegate? { get set }
+    var delegate: WebserviceDelegate? { get }
     var authorization: RequestAuthorization? { get set }
 
     func load<A>(resource: DataResource<A>, completion: @escaping (A?, Error?) -> Void)
@@ -60,6 +60,7 @@ public protocol Webservice {
     func cancelTask(for uuid: UUID)
     func isTaskActive(for uuid: UUID) -> Bool
     func isTaskActive(for url: URL) -> Bool
+    func setDownloadDelegate(_ delegate: WebserviceDownloadTaskDelegate?)
 }
 
 public final class ImplWebservice: NSObject, Webservice {
@@ -76,6 +77,10 @@ public final class ImplWebservice: NSObject, Webservice {
             delegate: self,
             delegateQueue: nil)
     }()
+
+    public func setDownloadDelegate(_ delegate: WebserviceDownloadTaskDelegate?) {
+        self.downloadDelegate = delegate
+    }
 
     /// @param completion: Both arguments (data and error) may be nil (for example, when a resource gets deleted)
     public func load<A>(resource: DataResource<A>, completion: @escaping (A?, Error?) -> Void) {
@@ -324,6 +329,10 @@ public final class MockWebservice: Webservice {
     public var mocksForUrl = [String: (data: Data?, error: Error?)]()
 
     public init() {
+    }
+
+    public func setDownloadDelegate(_ delegate: WebserviceDownloadTaskDelegate?) {
+        self.downloadDelegate = delegate
     }
 
     public func load(resource: DownloadResource, onPreparationError: @escaping (Error) -> Void) {

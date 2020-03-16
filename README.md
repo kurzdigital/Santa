@@ -73,6 +73,7 @@ pod 'Santa'
 * Write more tests
 * Extend mocked webservice to enable network independent tests (Download tasks, etc.)
 * Add usage description
+* Implement Upload Tasks
 
 ## Author
 

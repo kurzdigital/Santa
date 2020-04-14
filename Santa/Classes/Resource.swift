@@ -26,6 +26,8 @@ public struct HTTPHeader {
     public static let acceptTextPlain = "text/plain"
     public static let acceptJson = "application/json"
     public static let acceptPdf = "application/pdf"
+    public static let acceptImageJpeg = "image/jpeg"
+    public static let acceptImagePng = "image/png"
 
     public static func contentTypeMultipart(boundary: String) -> String {
         return "multipart/form-data; boundary=\(boundary)"

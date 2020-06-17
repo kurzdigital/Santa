@@ -1,5 +1,5 @@
 PODS:
-  - Santa (0.1.0)
+  - Santa (0.5.0)
 
 DEPENDENCIES:
   - Santa (from `../`)
@@ -9,8 +9,8 @@ EXTERNAL SOURCES:
     :path: "../"
 
 SPEC CHECKSUMS:
-  Santa: ab939a9a34dd32fa32406ccac8826c9d746afe3d
+  Santa: 8e55f50d67344ac7acc8169a1f66f4cbc17886fc
 
 PODFILE CHECKSUM: 230c51012dd7b57e481e6ba10ff9e003475dc10e
 
-COCOAPODS: 1.8.3
+COCOAPODS: 1.9.3

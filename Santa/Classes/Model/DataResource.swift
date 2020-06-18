@@ -75,5 +75,6 @@ extension DataResource where A: Decodable {
         self.init(url: url, method: method, body: body, uuid: uuid, authorizationNeeded: authorizationNeeded) { data -> A in
             try JSONDecoder().decode(A.self, from: data)
         }
+        self.headers.contentType = HTTPHeader.contentTypeJson
     }
 }

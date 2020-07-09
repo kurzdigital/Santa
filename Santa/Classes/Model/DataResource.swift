@@ -42,32 +42,6 @@ public final class DataResource<A>: Resource {
             authorizationNeeded: authorizationNeeded,
             parseData: parseData)
     }
-
-    public static func randomBoundary() -> String {
-        let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        return "XXX\(String(alphabet.shuffled()).dropFirst(alphabet.count - 10))XXX"
-    }
-
-    public static func multipartFormData(with data: Data, boundary: Boundary, mimeType: String) -> Data {
-        var returnData = Data()
-
-        guard let boundaryData = "--\(boundary)\r\n".data(using: .utf8),
-            let contentType = "Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8),
-            let contentDisposition = "Content-Disposition:form-data; name=\"file\"; filename=\"data.jpg\"\r\n".data(using: .utf8),
-            let newLine = "\r\n".data(using: .utf8),
-            let closingBoundary = "--\(boundary)--".data(using: .utf8) else {
-                preconditionFailure("Unable to create multi part form data")
-        }
-
-        returnData.append(boundaryData)
-        returnData.append(contentDisposition)
-        returnData.append(contentType)
-        returnData.append(data)
-        returnData.append(newLine)
-        returnData.append(closingBoundary)
-
-        return returnData
-    }
 }
 
 extension DataResource where A: Decodable {

@@ -29,7 +29,7 @@ let resource = DataResource(url: "your-url", method: .get, body: nil) { data in
     return try JSONDecoder().decode(Products.self, from: data)
 }
 
-ImplWebservice().load(resource: resource) { products, error in
+DefaultWebservice().load(resource: resource) { products, error in
     if let error = error {
         // do error handling
     }
@@ -76,6 +76,7 @@ pod 'Santa'
 * Extend mocked webservice to enable network independent tests (Download tasks, etc.)
 * Add usage description
 * Implement Upload Tasks
+* Make multipart form data more flexible
 
 ## Author
 

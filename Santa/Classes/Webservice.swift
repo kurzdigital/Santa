@@ -55,6 +55,7 @@ public protocol Webservice {
     var delegate: WebserviceDelegate? { get set }
     var authorization: RequestAuthorization? { get set }
 
+    func load<A>(resource: DataResource<A>, completion: @escaping (A?, URLResponse?, Error?) -> Void)
     func load<A>(resource: DataResource<A>, completion: @escaping (A?, Error?) -> Void)
     func load(resource: DownloadResource, onPreparationError: @escaping (Error) -> Void)
     func reset()
@@ -66,7 +67,9 @@ public protocol Webservice {
     func setBackgroundDownloadCompletionhandler(_ handler: @escaping () -> Void)
 }
 
-public final class ImplWebservice: NSObject, Webservice {
+public typealias ImplWebservice = DefaultWebservice
+
+public final class DefaultWebservice: NSObject, Webservice {
     public weak var downloadDelegate: WebserviceDownloadTaskDelegate?
     public var backgroundDownloadCompletionHandler: (() -> Void)?
     public weak var delegate: WebserviceDelegate?
@@ -94,16 +97,15 @@ public final class ImplWebservice: NSObject, Webservice {
         self.backgroundDownloadCompletionHandler = handler
     }
 
-    /// @param completion: Both arguments (data and error) may be nil (for example, when a resource gets deleted)
-    public func load<A>(resource: DataResource<A>, completion: @escaping (A?, Error?) -> Void) {
+    public func load<A>(resource: DataResource<A>, completion: @escaping (A?, URLResponse?, Error?) -> Void) {
         guard let request = createRequest(fromResource: resource) else {
-            completion(nil, NetworkError.parseUrl)
+            completion(nil, nil, NetworkError.parseUrl)
             return
         }
 
-        if let completion = completion as? (UIImage?, Error?) -> Void,
+        if let completion = completion as? (UIImage?, URLResponse?, Error?) -> Void,
             let image = imageCache.get(url: resource.url) {
-            completion(image, nil)
+            completion(image, nil, nil)
             return
         }
 
@@ -120,12 +122,17 @@ public final class ImplWebservice: NSObject, Webservice {
                         authedRequest,
                         completion: completion)
                 case .failure(let error):
-                    completion(nil, error)
+                    completion(nil, nil, error)
                 }
             }
         } else {
             doRequest(resource: resource, request, completion: completion)
         }
+    }
+
+    /// @param completion: Both arguments (data and error) may be nil (for example, when a resource gets deleted)
+    public func load<A>(resource: DataResource<A>, completion: @escaping (A?, Error?) -> Void) {
+        load(resource: resource) { result, _, error in completion(result, error) }
     }
 
     public func cancelTask(for uuid: UUID) {
@@ -184,16 +191,16 @@ public final class ImplWebservice: NSObject, Webservice {
         return request
     }
 
-    fileprivate func doRequest<A>(resource: DataResource<A>, _ request: URLRequest, completion: @escaping (A?, Error?) -> Void) {
+    fileprivate func doRequest<A>(resource: DataResource<A>, _ request: URLRequest, completion: @escaping (A?, URLResponse?, Error?) -> Void) {
         let dataTask = urlSession.dataTask(with: request) { data, response, error in
             self.activeTasks.removeValue(forKey: resource.uuid)
             if let error = self.errorForResponseAndError(response, error) {
-                completion(nil, error)
+                completion(nil, response, error)
                 self.delegate?.webservice(self, error: error, for: request, with: data)
                 return
             }
             guard let data = data else {
-                completion(nil, nil)
+                completion(nil, response, nil)
                 return
             }
             do {
@@ -201,9 +208,9 @@ public final class ImplWebservice: NSObject, Webservice {
                 if let image = result as? UIImage {
                     self.imageCache.add(url: resource.url, image: image)
                 }
-                completion(result, nil)
+                completion(result, response, nil)
             } catch {
-                completion(nil, NetworkError.parseData(message: error.localizedDescription))
+                completion(nil, response, NetworkError.parseData(message: error.localizedDescription))
             }
         }
         activeTasks[resource.uuid] = dataTask
@@ -345,6 +352,7 @@ extension ImplWebservice: URLSessionDownloadDelegate {
 }
 
 public final class MockWebservice: Webservice {
+
     public weak var downloadDelegate: WebserviceDownloadTaskDelegate?
     public var backgroundDownloadCompletionHandler: (() -> Void)?
     public weak var delegate: WebserviceDelegate?
@@ -366,15 +374,21 @@ public final class MockWebservice: Webservice {
     public func load(resource: DownloadResource, onPreparationError: @escaping (Error) -> Void) {
     }
 
-    public func load<A>(resource: DataResource<A>, completion: @escaping (A?, Error?) -> Void) {
+    public func load<A>(resource: DataResource<A>, completion: @escaping (A?, URLResponse?, Error?) -> Void) {
         if let currentMock = mocksForUrl[resource.url] {
             if let data = currentMock.data {
-                try? completion(resource.parseData(data), currentMock.error)
+                try? completion(resource.parseData(data), nil, currentMock.error)
             } else {
-                completion(nil, currentMock.error)
+                completion(nil, nil, currentMock.error)
             }
         } else {
-            completion(nil, nil)
+            completion(nil, nil, nil)
+        }
+    }
+
+    public func load<A>(resource: DataResource<A>, completion: @escaping (A?, Error?) -> Void) {
+        load(resource: resource) { result, _, error in
+            completion(result, error)
         }
     }
 

@@ -40,12 +40,12 @@ public enum NetworkError: LocalizedError, Equatable {
     }
 }
 
-public protocol WebserviceDownloadTaskDelegate: class {
+public protocol WebserviceDownloadTaskDelegate: AnyObject {
     func webservice(_ sender: Webservice, didFinishDownload url: String, atLocation location: URL, fileName: String)
     func webservice(_ sender: Webservice, didErrorDownload url: String, with error: Error, forFileName fileName: String?)
 }
 
-public protocol WebserviceDelegate: class {
+public protocol WebserviceDelegate: AnyObject {
     func webservice(_ sender: Webservice, error: Error, for request: URLRequest, with data: Data?)
 }
 
@@ -54,6 +54,7 @@ public protocol Webservice {
     var backgroundDownloadCompletionHandler: (() -> Void)? { get set }
     var delegate: WebserviceDelegate? { get set }
     var authorization: RequestAuthorization? { get set }
+    var urlSession: URLSession { get set }
 
     func load<A>(resource: DataResource<A>, completion: @escaping (A?, URLResponse?, Error?) -> Void)
     func load<A>(resource: DataResource<A>, completion: @escaping (A?, Error?) -> Void)
@@ -78,7 +79,7 @@ public final class DefaultWebservice: NSObject, Webservice {
     public var imageCache = ImageCache()
     fileprivate var fileNameForDownloadTasks = [Int: String]()
     fileprivate var activeTasks = [UUID: URLSessionTask]()
-    fileprivate lazy var urlSession: URLSession = {
+    public lazy var urlSession: URLSession = {
         URLSession(
             configuration: URLSessionConfiguration.default,
             delegate: self,
@@ -352,7 +353,7 @@ extension ImplWebservice: URLSessionDownloadDelegate {
 }
 
 public final class MockWebservice: Webservice {
-
+    public var urlSession: URLSession = URLSession.shared
     public weak var downloadDelegate: WebserviceDownloadTaskDelegate?
     public var backgroundDownloadCompletionHandler: (() -> Void)?
     public weak var delegate: WebserviceDelegate?

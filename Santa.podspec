@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'Santa'
-  s.version          = '0.6.0'
+  s.version          = '0.7.0'
   s.summary          = 'A resource based network communication lib'
 
   s.description      = <<-DESC
@@ -15,7 +15,7 @@ Pod::Spec.new do |s|
   s.source           = { :git => 'https://github.com/kurzdigital/Santa.git', :tag => s.version.to_s }
 
   s.swift_version = "5.0"
-  s.ios.deployment_target = '9.0'
+  s.ios.deployment_target = '12.0'
   s.source_files = 'Santa/Classes/**/*.swift'
   s.frameworks = 'UIKit'
 end

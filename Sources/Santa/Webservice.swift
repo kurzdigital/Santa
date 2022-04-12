@@ -297,7 +297,7 @@ public extension ImplWebservice {
     }
 }
 
-extension ImplWebservice: URLSessionDownloadDelegate {
+extension DefaultWebservice: URLSessionDownloadDelegate {
     // MARK: - URLSessionDownloadDelegate
 
     public func urlSession(
@@ -349,65 +349,5 @@ extension ImplWebservice: URLSessionDownloadDelegate {
             debugPrint("Background downloads finished")
             self.backgroundDownloadCompletionHandler?()
         }
-    }
-}
-
-public final class MockWebservice: Webservice {
-    public var urlSession: URLSession = URLSession.shared
-    public weak var downloadDelegate: WebserviceDownloadTaskDelegate?
-    public var backgroundDownloadCompletionHandler: (() -> Void)?
-    public weak var delegate: WebserviceDelegate?
-    /// Will not be used with the mocked webservice
-    public var authorization: RequestAuthorization?
-    public var mocksForUrl = [String: (data: Data?, error: Error?)]()
-
-    public init() {
-    }
-
-    public func setDownloadDelegate(_ delegate: WebserviceDownloadTaskDelegate?) {
-        self.downloadDelegate = delegate
-    }
-
-    public func setBackgroundDownloadCompletionhandler(_ handler: @escaping () -> Void) {
-        self.backgroundDownloadCompletionHandler = handler
-    }
-
-    public func load(resource: DownloadResource, onPreparationError: @escaping (Error) -> Void) {
-    }
-
-    public func load<A>(resource: DataResource<A>, completion: @escaping (A?, URLResponse?, Error?) -> Void) {
-        if let currentMock = mocksForUrl[resource.url] {
-            if let data = currentMock.data {
-                try? completion(resource.parseData(data), nil, currentMock.error)
-            } else {
-                completion(nil, nil, currentMock.error)
-            }
-        } else {
-            completion(nil, nil, nil)
-        }
-    }
-
-    public func load<A>(resource: DataResource<A>, completion: @escaping (A?, Error?) -> Void) {
-        load(resource: resource) { result, _, error in
-            completion(result, error)
-        }
-    }
-
-    public func reset() {
-    }
-
-    public func cancelTask(for uuid: UUID) {
-    }
-
-    public func isTaskActive(for uuid: UUID) -> Bool {
-        return true
-    }
-
-    public func isTaskActive(for url: URL) -> Bool {
-        return true
-    }
-
-    public func isTaskActive(forFileName fileName: String) -> Bool {
-        return true
     }
 }

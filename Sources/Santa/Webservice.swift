@@ -55,6 +55,7 @@ public protocol Webservice {
     var delegate: WebserviceDelegate? { get set }
     var authorization: RequestAuthorization? { get set }
     var urlSession: URLSession { get set }
+    var backgroundURLSession: URLSession { get set }
 
     func load<A>(resource: DataResource<A>, completion: @escaping (A?, URLResponse?, Error?) -> Void)
     func load<A>(resource: DataResource<A>, completion: @escaping (A?, Error?) -> Void)
@@ -82,6 +83,16 @@ public final class DefaultWebservice: NSObject, Webservice {
     public lazy var urlSession: URLSession = {
         URLSession(
             configuration: URLSessionConfiguration.default,
+            delegate: self,
+            delegateQueue: nil)
+    }()
+
+    public lazy var backgroundURLSession: URLSession = {
+        let config = URLSessionConfiguration.background(withIdentifier: "SantaBackgroundURLSession")
+        config.sessionSendsLaunchEvents = true
+        config.isDiscretionary = true
+        return URLSession(
+            configuration: config,
             delegate: self,
             delegateQueue: nil)
     }()
@@ -251,6 +262,11 @@ public final class DefaultWebservice: NSObject, Webservice {
     }
 
     public func resetUrlTasks() {
+        cancelTasks(for: urlSession)
+        cancelTasks(for: backgroundURLSession)
+    }
+
+    fileprivate func cancelTasks(for urlSession: URLSession) {
        urlSession.getTasksWithCompletionHandler { dataTasks, uploadTasks, downloadTasks in
             // cancel all tasks
             dataTasks.forEach { $0.cancel() }
@@ -290,7 +306,7 @@ public extension ImplWebservice {
     fileprivate func doRequest(
         resource: DownloadResource ,
         _ request: URLRequest) {
-        let downloadTask = urlSession.downloadTask(with: request)
+        let downloadTask = backgroundURLSession.downloadTask(with: request)
         fileNameForDownloadTasks[downloadTask.taskIdentifier] = resource.fileName
         activeTasks[resource.uuid] = downloadTask
         downloadTask.resume()

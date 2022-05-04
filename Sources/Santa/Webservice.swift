@@ -42,42 +42,49 @@ public enum NetworkError: LocalizedError, Equatable {
 
 public protocol WebserviceDownloadTaskDelegate: AnyObject {
     func webservice(_ sender: Webservice, didFinishDownload url: String, atLocation location: URL, fileName: String)
-    func webservice(_ sender: Webservice, didErrorDownload url: String, with error: Error, forFileName fileName: String?)
+    func webservice(_ sender: Webservice, didErrorDownload url: String, with error: Error, for taskIdentifier: TaskIdentifier)
+}
+
+public protocol WebserviceUploadTaskDelegate: AnyObject {
+    func webservice(_ sender: Webservice, didFinishUpload url: String, forFilePath filepath: URL, taskIdentifier: TaskIdentifier)
+    func webservice(_ sender: Webservice, didErrorUpload url: String, with error: Error, for taskIdentifier: TaskIdentifier)
 }
 
 public protocol WebserviceDelegate: AnyObject {
-    func webservice(_ sender: Webservice, error: Error, for request: URLRequest, with data: Data?)
+    func webservice(_ sender: Webservice, error: Error, for request: URLRequest, with data: Data?, taskIdentifier: TaskIdentifier)
 }
 
 public protocol Webservice {
+    var delegate: WebserviceDelegate? { get set }
+    var uploadDelegate: WebserviceUploadTaskDelegate? { get set }
     var downloadDelegate: WebserviceDownloadTaskDelegate? { get set }
     var backgroundDownloadCompletionHandler: (() -> Void)? { get set }
-    var delegate: WebserviceDelegate? { get set }
     var authorization: RequestAuthorization? { get set }
     var urlSession: URLSession { get set }
+    var downAndUploadURLSession: URLSession { get set }
 
     func load<A>(resource: DataResource<A>, completion: @escaping (A?, URLResponse?, Error?) -> Void)
     func load<A>(resource: DataResource<A>, completion: @escaping (A?, Error?) -> Void)
     func load(resource: DownloadResource, onPreparationError: @escaping (Error) -> Void)
+    func load(resource: UploadResource, onPreparationError: @escaping (Error) -> Void)
     func reset()
     func cancelTask(for uuid: UUID)
     func isTaskActive(for uuid: UUID) -> Bool
     func isTaskActive(for url: URL) -> Bool
     func isTaskActive(forFileName fileName: String) -> Bool
-    func setDownloadDelegate(_ delegate: WebserviceDownloadTaskDelegate?)
-    func setBackgroundDownloadCompletionhandler(_ handler: @escaping () -> Void)
 }
 
 public typealias ImplWebservice = DefaultWebservice
 
+
 public final class DefaultWebservice: NSObject, Webservice {
+    public weak var uploadDelegate: WebserviceUploadTaskDelegate?
     public weak var downloadDelegate: WebserviceDownloadTaskDelegate?
     public var backgroundDownloadCompletionHandler: (() -> Void)?
     public weak var delegate: WebserviceDelegate?
     public var authorization: RequestAuthorization?
 
     public var imageCache = ImageCache()
-    fileprivate var fileNameForDownloadTasks = [Int: String]()
     fileprivate var activeTasks = [UUID: URLSessionTask]()
     public lazy var urlSession: URLSession = {
         URLSession(
@@ -86,16 +93,26 @@ public final class DefaultWebservice: NSObject, Webservice {
             delegateQueue: nil)
     }()
 
-    public func setDownloadDelegate(_ delegate: WebserviceDownloadTaskDelegate?) {
-        self.downloadDelegate = delegate
-    }
+    public lazy var downAndUploadURLSession: URLSession = {
+        let config = URLSessionConfiguration.background(withIdentifier: "SantaBackgroundURLSession")
+        config.sessionSendsLaunchEvents = true
+        config.isDiscretionary = false
+        config.waitsForConnectivity = true
+        return URLSession(
+            configuration: config,
+            delegate: self,
+            delegateQueue: nil)
+    }()
 
-    public func setDelegate(_ delegate: WebserviceDelegate?) {
-        self.delegate = delegate
-    }
+    public init(useBackgroundURLSession: Bool = false) {
+        super.init()
+        // Overrides the configured session
+        if useBackgroundURLSession == false {
+           downAndUploadURLSession = urlSession
+        }
 
-    public func setBackgroundDownloadCompletionhandler(_ handler: @escaping () -> Void) {
-        self.backgroundDownloadCompletionHandler = handler
+        populateActiveTasks(for: urlSession)
+        populateActiveTasks(for: downAndUploadURLSession)
     }
 
     public func load<A>(resource: DataResource<A>, completion: @escaping (A?, URLResponse?, Error?) -> Void) {
@@ -160,7 +177,7 @@ public final class DefaultWebservice: NSObject, Webservice {
     }
 
     public func isTaskActive(forFileName fileName: String) -> Bool {
-        return fileNameForDownloadTasks.values.contains(fileName)
+        activeTasks.values.contains { TaskIdentifier(taskDescription: $0.taskDescription)?.additional == fileName }
     }
 
     public func reset() {
@@ -194,10 +211,14 @@ public final class DefaultWebservice: NSObject, Webservice {
 
     fileprivate func doRequest<A>(resource: DataResource<A>, _ request: URLRequest, completion: @escaping (A?, URLResponse?, Error?) -> Void) {
         let dataTask = urlSession.dataTask(with: request) { data, response, error in
-            self.activeTasks.removeValue(forKey: resource.uuid)
+            let task = self.activeTasks.removeValue(forKey: resource.uuid)
+            guard let taskIdentifier = TaskIdentifier(taskDescription: task?.taskDescription) else {
+                assertionFailure("Task description must contain custom task identifier")
+                return
+            }
             if let error = self.errorForResponseAndError(response, error) {
                 completion(nil, response, error)
-                self.delegate?.webservice(self, error: error, for: request, with: data)
+                self.delegate?.webservice(self, error: error, for: request, with: data, taskIdentifier: taskIdentifier)
                 return
             }
             guard let data = data else {
@@ -214,6 +235,7 @@ public final class DefaultWebservice: NSObject, Webservice {
                 completion(nil, response, NetworkError.parseData(message: error.localizedDescription))
             }
         }
+        dataTask.taskDescription = TaskIdentifier(taskType: .data, uuid: resource.uuid, additional: nil).stringValue
         activeTasks[resource.uuid] = dataTask
         dataTask.resume()
     }
@@ -251,16 +273,29 @@ public final class DefaultWebservice: NSObject, Webservice {
     }
 
     public func resetUrlTasks() {
-       urlSession.getTasksWithCompletionHandler { dataTasks, uploadTasks, downloadTasks in
-            // cancel all tasks
-            dataTasks.forEach { $0.cancel() }
-            uploadTasks.forEach { $0.cancel() }
-            downloadTasks.forEach { $0.cancel() }
-       }
+        cancelTasks(for: urlSession)
+        cancelTasks(for: downAndUploadURLSession)
+    }
+
+    fileprivate func cancelTasks(for urlSession: URLSession) {
+        urlSession.getAllTasks { tasks in
+            tasks.forEach { $0.cancel() }
+        }
+    }
+
+    fileprivate func populateActiveTasks(for urlSession: URLSession) {
+        urlSession.getAllTasks { tasks in
+            tasks.forEach { task in
+                guard let identifier = TaskIdentifier(taskDescription: task.taskDescription)?.uuid else {
+                    return
+                }
+                self.activeTasks[identifier] = task
+            }
+        }
     }
 }
 
-public extension ImplWebservice {
+public extension DefaultWebservice {
     func load(resource: DownloadResource, onPreparationError: @escaping (Error) -> Void) {
         guard let request = createRequest(fromResource: resource) else {
             onPreparationError(NetworkError.parseUrl)
@@ -290,124 +325,114 @@ public extension ImplWebservice {
     fileprivate func doRequest(
         resource: DownloadResource ,
         _ request: URLRequest) {
-        let downloadTask = urlSession.downloadTask(with: request)
-        fileNameForDownloadTasks[downloadTask.taskIdentifier] = resource.fileName
-        activeTasks[resource.uuid] = downloadTask
-        downloadTask.resume()
+            let downloadTask = downAndUploadURLSession.downloadTask(with: request)
+            downloadTask.taskDescription = TaskIdentifier(taskType: .download, uuid: resource.uuid, additional: resource.fileName).stringValue
+            activeTasks[resource.uuid] = downloadTask
+            downloadTask.resume()
     }
 }
 
-extension ImplWebservice: URLSessionDownloadDelegate {
+
+public extension DefaultWebservice {
+    func load(resource: UploadResource, onPreparationError: @escaping (Error) -> Void) {
+        guard let request = createRequest(fromResource: resource) else {
+            onPreparationError(NetworkError.parseUrl)
+            return
+        }
+
+        if resource.authorizationNeeded {
+            guard let authorization = authorization else {
+                assertionFailure("Authorization must be set if a resource requires authorization")
+                return
+            }
+            authorization.authorize(request, for: resource) { result in
+                switch result {
+                case .success(let authedRequest):
+                    self.doRequest(
+                        resource: resource,
+                        authedRequest)
+                case .failure(let error):
+                    onPreparationError(error)
+                }
+            }
+        } else {
+            doRequest(resource: resource, request)
+        }
+    }
+
+    fileprivate func doRequest(
+        resource: UploadResource,
+        _ request: URLRequest) {
+            let uploadTask = downAndUploadURLSession.uploadTask(with: request, fromFile: resource.filePath)
+            uploadTask.taskDescription = TaskIdentifier(taskType: .upload, uuid: resource.uuid, additional: resource.filePath.absoluteString).stringValue
+            activeTasks[resource.uuid] = uploadTask
+            uploadTask.resume()
+    }
+}
+
+
+extension DefaultWebservice: URLSessionDownloadDelegate {
     // MARK: - URLSessionDownloadDelegate
 
     public func urlSession(
         _ session: URLSession,
         downloadTask: URLSessionDownloadTask,
         didFinishDownloadingTo location: URL) {
-        guard let fileName = fileNameForDownloadTasks.removeValue(forKey: downloadTask.taskIdentifier) else {
-            assertionFailure("Unable to get filename for download task")
-            return
+            guard let taskIdentifier = TaskIdentifier(taskDescription: downloadTask.taskDescription),
+            let fileName = taskIdentifier.additional else {
+                assertionFailure("Unable to get filename for download task")
+                return
+            }
+            guard let url = downloadTask.originalRequest?.url else {
+                preconditionFailure("Download task must contain url")
+            }
+            downloadDelegate?.webservice(self, didFinishDownload: url.absoluteString, atLocation: location, fileName: fileName)
         }
-        guard let url = downloadTask.originalRequest?.url else {
-            preconditionFailure("Download task must contain url")
-        }
-        do {
-            let destination = try DownloadedFilesManager.moveItemToDocuments(
-                at: location,
-                fileName: fileName)
-            downloadDelegate?.webservice(self, didFinishDownload: url.absoluteString, atLocation: destination, fileName: fileName)
-        } catch {
-            try? DownloadedFilesManager.removeItem(fileName: fileName)
-            downloadDelegate?.webservice(self, didErrorDownload: url.absoluteString, with: error, forFileName: fileName)
-        }
-    }
 
     public func urlSession(
         _ session: URLSession,
         task: URLSessionTask,
         didCompleteWithError error: Error?) {
-        let fileName = fileNameForDownloadTasks.removeValue(forKey: task.taskIdentifier)
-        for currentTaskPair in activeTasks
-            where currentTaskPair.value.taskIdentifier == task.taskIdentifier {
-                activeTasks.removeValue(forKey: currentTaskPair.key)
-        }
-
-        guard let url = task.originalRequest?.url else {
-            preconditionFailure("Download task must contain url")
-        }
-
-        if let error = errorForResponseAndError(task.response, error) {
-            if let fileName = fileName {
-                try? DownloadedFilesManager.removeItem(fileName: fileName)
+            guard let taskIdentifier = TaskIdentifier(taskDescription: task.taskDescription) else {
+                assertionFailure("Unable to get custom task identifier from task \(task.taskDescription ?? "No description set")")
+                return
             }
-            downloadDelegate?.webservice(self, didErrorDownload: url.absoluteString, with: error, forFileName: fileName)
+            activeTasks.removeValue(forKey: taskIdentifier.uuid)
+
+            guard let url = task.originalRequest?.url else {
+                preconditionFailure("Download task must contain url")
+            }
+
+            if let error = errorForResponseAndError(task.response, error) {
+                switch taskIdentifier.type {
+                case .download:
+                    downloadDelegate?.webservice(self, didErrorDownload: url.absoluteString, with: error, for: taskIdentifier)
+                case .upload:
+                    uploadDelegate?.webservice(self, didErrorUpload: url.absoluteString, with: error, for: taskIdentifier)
+                case .data:
+                    break
+                }
+                return
+            }
+
+            if taskIdentifier.type == .upload,
+               let filePathString = taskIdentifier.additional,
+               let url = URL(string: filePathString) {
+                uploadDelegate?.webservice(
+                    self,
+                    didFinishUpload: url.absoluteString,
+                    forFilePath: url,
+                    taskIdentifier: taskIdentifier)
+            }
         }
-    }
 
     public func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+        guard session == downAndUploadURLSession else {
+            return
+        }
         DispatchQueue.main.async {
             debugPrint("Background downloads finished")
             self.backgroundDownloadCompletionHandler?()
         }
-    }
-}
-
-public final class MockWebservice: Webservice {
-    public var urlSession: URLSession = URLSession.shared
-    public weak var downloadDelegate: WebserviceDownloadTaskDelegate?
-    public var backgroundDownloadCompletionHandler: (() -> Void)?
-    public weak var delegate: WebserviceDelegate?
-    /// Will not be used with the mocked webservice
-    public var authorization: RequestAuthorization?
-    public var mocksForUrl = [String: (data: Data?, error: Error?)]()
-
-    public init() {
-    }
-
-    public func setDownloadDelegate(_ delegate: WebserviceDownloadTaskDelegate?) {
-        self.downloadDelegate = delegate
-    }
-
-    public func setBackgroundDownloadCompletionhandler(_ handler: @escaping () -> Void) {
-        self.backgroundDownloadCompletionHandler = handler
-    }
-
-    public func load(resource: DownloadResource, onPreparationError: @escaping (Error) -> Void) {
-    }
-
-    public func load<A>(resource: DataResource<A>, completion: @escaping (A?, URLResponse?, Error?) -> Void) {
-        if let currentMock = mocksForUrl[resource.url] {
-            if let data = currentMock.data {
-                try? completion(resource.parseData(data), nil, currentMock.error)
-            } else {
-                completion(nil, nil, currentMock.error)
-            }
-        } else {
-            completion(nil, nil, nil)
-        }
-    }
-
-    public func load<A>(resource: DataResource<A>, completion: @escaping (A?, Error?) -> Void) {
-        load(resource: resource) { result, _, error in
-            completion(result, error)
-        }
-    }
-
-    public func reset() {
-    }
-
-    public func cancelTask(for uuid: UUID) {
-    }
-
-    public func isTaskActive(for uuid: UUID) -> Bool {
-        return true
-    }
-
-    public func isTaskActive(for url: URL) -> Bool {
-        return true
-    }
-
-    public func isTaskActive(forFileName fileName: String) -> Bool {
-        return true
     }
 }

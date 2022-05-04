@@ -46,7 +46,7 @@ public protocol WebserviceDownloadTaskDelegate: AnyObject {
 }
 
 public protocol WebserviceUploadTaskDelegate: AnyObject {
-    func webservice(_ sender: Webservice, didFinishUpload url: String, forFilePath filepath: URL)
+    func webservice(_ sender: Webservice, didFinishUpload url: String, forFilePath filepath: URL, taskIdentifier: TaskIdentifier)
     func webservice(_ sender: Webservice, didErrorUpload url: String, with error: Error, for taskIdentifier: TaskIdentifier)
 }
 
@@ -97,6 +97,7 @@ public final class DefaultWebservice: NSObject, Webservice {
         let config = URLSessionConfiguration.background(withIdentifier: "SantaBackgroundURLSession")
         config.sessionSendsLaunchEvents = true
         config.isDiscretionary = false
+        config.waitsForConnectivity = true
         return URLSession(
             configuration: config,
             delegate: self,
@@ -176,7 +177,7 @@ public final class DefaultWebservice: NSObject, Webservice {
     }
 
     public func isTaskActive(forFileName fileName: String) -> Bool {
-        activeTasks.values.contains { TaskIdentifier(taskDescription: $0.description)?.additional == fileName }
+        activeTasks.values.contains { TaskIdentifier(taskDescription: $0.taskDescription)?.additional == fileName }
     }
 
     public func reset() {
@@ -393,7 +394,7 @@ extension DefaultWebservice: URLSessionDownloadDelegate {
         task: URLSessionTask,
         didCompleteWithError error: Error?) {
             guard let taskIdentifier = TaskIdentifier(taskDescription: task.taskDescription) else {
-                assertionFailure("Unable to get custom task identifier from task \(task.description)")
+                assertionFailure("Unable to get custom task identifier from task \(task.taskDescription ?? "No description set")")
                 return
             }
             activeTasks.removeValue(forKey: taskIdentifier.uuid)
@@ -411,11 +412,17 @@ extension DefaultWebservice: URLSessionDownloadDelegate {
                 case .data:
                     break
                 }
+                return
             }
 
             if taskIdentifier.type == .upload,
-               let filePathString = taskIdentifier.additional {
-                uploadDelegate?.webservice(self, didFinishUpload: url.absoluteString, forFilePath:  URL(fileURLWithPath: filePathString))
+               let filePathString = taskIdentifier.additional,
+               let url = URL(string: filePathString) {
+                uploadDelegate?.webservice(
+                    self,
+                    didFinishUpload: url.absoluteString,
+                    forFilePath: url,
+                    taskIdentifier: taskIdentifier)
             }
         }
 

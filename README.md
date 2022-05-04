@@ -53,6 +53,7 @@ extension Products {
 ## Features
 * Support for custom authorization
 * Background download tasks
+* Background upload tasks
 * Cancelling of running URLSessionTasks
 * ImageCache based on the url
 * Error handling for error status codes and network problems
@@ -73,9 +74,7 @@ pod 'Santa'
 ## TODO
 
 * Write more tests
-* Extend mocked webservice to enable network independent tests (Download tasks, etc.)
 * Add usage description
-* Implement Upload Tasks
 * Make multipart form data more flexible
 
 ## Author

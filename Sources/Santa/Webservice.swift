@@ -46,8 +46,8 @@ public protocol WebserviceDownloadTaskDelegate: AnyObject {
 }
 
 public protocol WebserviceUploadTaskDelegate: AnyObject {
-    func webservice(_ sender: Webservice, didFinishUpload url: String, forFilePath filepath: URL, taskIdentifier: TaskIdentifier)
-    func webservice(_ sender: Webservice, didErrorUpload url: String, with error: Error, for taskIdentifier: TaskIdentifier)
+    func webservice(_ sender: Webservice, didFinishUpload url: String, forFilePath filepath: URL, taskIdentifier: TaskIdentifier, data: Data?)
+    func webservice(_ sender: Webservice, didErrorUpload url: String, with error: Error, for taskIdentifier: TaskIdentifier, data: Data?)
 }
 
 public protocol WebserviceDelegate: AnyObject {
@@ -86,6 +86,7 @@ public final class DefaultWebservice: NSObject, Webservice {
 
     public var imageCache = ImageCache()
     fileprivate var activeTasks = [UUID: URLSessionTask]()
+    fileprivate var uploadTaskDataForTaskUUID = [UUID: Data]()
     public lazy var urlSession: URLSession = {
         URLSession(
             configuration: URLSessionConfiguration.default,
@@ -371,8 +372,17 @@ public extension DefaultWebservice {
 }
 
 
-extension DefaultWebservice: URLSessionDownloadDelegate {
+extension DefaultWebservice: URLSessionDownloadDelegate, URLSessionDataDelegate {
     // MARK: - URLSessionDownloadDelegate
+
+    public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        guard let taskIdentifier = TaskIdentifier(taskDescription: dataTask.taskDescription),
+        taskIdentifier.type == .upload else {
+            return
+        }
+
+        uploadTaskDataForTaskUUID[taskIdentifier.uuid] = data
+    }
 
     public func urlSession(
         _ session: URLSession,
@@ -408,7 +418,7 @@ extension DefaultWebservice: URLSessionDownloadDelegate {
                 case .download:
                     downloadDelegate?.webservice(self, didErrorDownload: url.absoluteString, with: error, for: taskIdentifier)
                 case .upload:
-                    uploadDelegate?.webservice(self, didErrorUpload: url.absoluteString, with: error, for: taskIdentifier)
+                    uploadDelegate?.webservice(self, didErrorUpload: url.absoluteString, with: error, for: taskIdentifier, data: uploadTaskDataForTaskUUID.removeValue(forKey: taskIdentifier.uuid))
                 case .data:
                     break
                 }
@@ -422,7 +432,9 @@ extension DefaultWebservice: URLSessionDownloadDelegate {
                     self,
                     didFinishUpload: url.absoluteString,
                     forFilePath: url,
-                    taskIdentifier: taskIdentifier)
+                    taskIdentifier: taskIdentifier,
+                    data: uploadTaskDataForTaskUUID.removeValue(forKey: taskIdentifier.uuid)
+                )
             }
         }
 

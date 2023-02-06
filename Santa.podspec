@@ -11,7 +11,7 @@ Pod::Spec.new do |s|
 
   s.homepage         = 'https://github.com/kurzdigital/Santa'
   s.license          = { :type => 'MIT', :file => 'LICENSE' }
-  s.author           = { 'Christian Braun' => 'christian.braun@kurzdigital.com' }
+  s.author           = { 'Christian Braun' => 'christian.braun@theempathicdev.de' }
   s.source           = { :git => 'https://github.com/kurzdigital/Santa.git', :tag => s.version.to_s }
 
   s.swift_version = "5.0"

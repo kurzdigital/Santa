@@ -393,7 +393,7 @@ extension DefaultWebservice: URLSessionDownloadDelegate, URLSessionDataDelegate 
                 assertionFailure("Unable to get filename for download task")
                 return
             }
-            if let error = self.errorForResponseAndError(downloadTask.response, nil) {
+            guard errorForResponseAndError(downloadTask.response, nil) == nil else {
                 return
             }
             guard let url = downloadTask.originalRequest?.url else {
